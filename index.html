@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SENTRY FAHIM | FAHIM EDITION</title>
+<title>GLOBAL INTEL | FAHIM EDITION</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Barlow+Condensed:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -15,21 +15,21 @@
   --red:    #ff3355;
   --gold:   #ffaa00;
   --green:  #00e676;
-  --bg:     #020912;
-  --card:   rgba(4,14,28,0.97);
-  --border: rgba(0,229,255,0.18);
-  --text:   #ddeeff;
-  --text2:  rgba(221,238,255,0.55);
-  --text3:  rgba(221,238,255,0.35);
-  --ocean:  #010d1e;
-  --land:   #0d1f35;
-  --land-s: #0a2040;
-  --hud-bg: rgba(2,9,18,0.98);
-  --leg-bg: rgba(2,9,18,0.9);
-  --stat-border: rgba(255,255,255,0.04);
-  --time-bg: rgba(0,229,255,0.04);
+  --bg:     #060e1a;
+  --card:   rgba(8,18,36,0.98);
+  --border: rgba(0,229,255,0.22);
+  --text:   #e8f4ff;
+  --text2:  rgba(200,225,255,0.6);
+  --text3:  rgba(200,225,255,0.35);
+  --ocean:  #0a1a2e;
+  --land:   #1e4d6b;
+  --land-s: #2d7aaa;
+  --hud-bg: rgba(6,14,26,0.98);
+  --leg-bg: rgba(6,14,26,0.92);
+  --stat-border: rgba(255,255,255,0.06);
+  --time-bg: rgba(0,229,255,0.05);
   --brand-shadow: 0 0 20px rgba(0,229,255,0.5);
-  --scan-color: rgba(0,0,0,0.04);
+  --scan-color: rgba(0,0,0,0.03);
 }
 
 /* ══ LIGHT MODE ══ */
@@ -97,21 +97,24 @@ body::after {
 #map-svg { width:100vw; height:100vh; display:block; position:relative; z-index:1; }
 
 .country {
-  fill: var(--land);
-  stroke: var(--land-s);
-  stroke-width: 0.4;
+  fill: #1e4d6b;
+  stroke: #2d7aaa;
+  stroke-width: 0.6;
   cursor: pointer;
-  transition: fill 0.2s;
+  transition: fill 0.2s, stroke 0.2s;
 }
-.country:hover { fill: rgba(0,229,255,0.25); stroke: var(--c); stroke-width: 0.8; }
-.country.selected { fill: rgba(0,229,255,0.2); stroke: var(--c); stroke-width: 1.2; }
-.country.nuclear { fill: rgba(255,51,85,0.08); }
-.country.nuclear:hover { fill: rgba(255,51,85,0.3); stroke: var(--red); }
-.country.nuclear.selected { fill: rgba(255,51,85,0.2); stroke: var(--red); }
-body.light .country { fill:#c8dff0; stroke:#90b8d8; }
-body.light .country:hover { fill:rgba(0,150,220,0.3); stroke:var(--c); }
-body.light .country.selected { fill:rgba(0,150,220,0.25); }
-body.light .country.nuclear { fill:rgba(255,51,85,0.1); }
+.country:hover { fill: #2a8fbf; stroke: var(--c); stroke-width: 1; }
+.country.selected { fill: rgba(0,229,255,0.35); stroke: var(--c); stroke-width: 1.5; filter: drop-shadow(0 0 6px rgba(0,229,255,0.4)); }
+.country.nuclear { fill: #4a1a26; stroke: #8a3040; stroke-width: 0.6; }
+.country.nuclear:hover { fill: #7a2535; stroke: var(--red); stroke-width: 1; }
+.country.nuclear.selected { fill: rgba(255,51,85,0.35); stroke: var(--red); stroke-width: 1.5; filter: drop-shadow(0 0 6px rgba(255,51,85,0.4)); }
+
+body.light .country { fill:#8ec6e8; stroke:#5aa0cc; stroke-width:0.6; }
+body.light .country:hover { fill:#5aaee0; stroke:#2277bb; }
+body.light .country.selected { fill:rgba(0,120,220,0.4); stroke:#0077cc; stroke-width:1.5; }
+body.light .country.nuclear { fill:#e8a0a8; stroke:#cc5566; stroke-width:0.6; }
+body.light .country.nuclear:hover { fill:#dd7080; stroke:var(--red); }
+body.light .country.nuclear.selected { fill:rgba(255,51,85,0.3); stroke:var(--red); }
 .ocean { fill: var(--ocean); transition:fill 0.4s; }
 
 /* ── HEADER ── */
@@ -390,7 +393,7 @@ body.light .theme-btn { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.1
     </div>
 
     <div class="power-bar-wrap">
-      <div class="power-label">GLOBAL POWER INDEX</div>
+      <div class="power-label">SENTRY POWER INDEX</div>
       <div class="power-track">
         <div class="power-fill" id="power-fill" style="width:0%;background:linear-gradient(90deg,var(--c),var(--c2));"></div>
       </div>
@@ -403,9 +406,9 @@ body.light .theme-btn { background:rgba(0,0,0,0.04); border-color:rgba(0,0,0,0.1
 
 <!-- LEGEND -->
 <div class="legend">
-  <div class="leg-item"><div class="leg-dot" style="background:#0d1f35;border:1px solid #0a2040;"></div>COUNTRY</div>
-  <div class="leg-item"><div class="leg-dot" style="background:rgba(0,229,255,0.25);border:1px solid var(--c);"></div>SELECTED</div>
-  <div class="leg-item"><div class="leg-dot" style="background:rgba(255,51,85,0.2);border:1px solid var(--red);"></div>NUCLEAR POWER</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#1e4d6b;border:1px solid #2d7aaa;"></div>COUNTRY</div>
+  <div class="leg-item"><div class="leg-dot" style="background:rgba(0,229,255,0.35);border:1px solid var(--c);"></div>SELECTED</div>
+  <div class="leg-item"><div class="leg-dot" style="background:#4a1a26;border:1px solid #8a3040;"></div>NUCLEAR POWER</div>
   <div class="leg-item" style="margin-left:8px;">🖱️ CLICK TO INSPECT</div>
 </div>
 
@@ -880,9 +883,8 @@ function toggleTheme() {
   isLight = !isLight;
   document.body.classList.toggle("light", isLight);
   document.getElementById("themeBtn").textContent = isLight ? "🌑" : "🌙";
-  // Update ocean fill
   document.querySelectorAll(".ocean").forEach(el => {
-    el.style.fill = isLight ? "#b8d9f0" : "#010d1e";
+    el.style.fill = isLight ? "#5590c0" : "#0a1a2e";
   });
 }
 
@@ -917,13 +919,19 @@ function closeDash() {
   selectedEl = null;
   if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
   document.getElementById("hint").style.display = "block";
-  // Reset zoom
-  svg.transition().duration(900).ease(d3.easeCubicInOut)
-    .call(zoom.transform, d3.zoomIdentity);
+  // ✅ Zoom রিসেট করা হবে না — ব্যবহারকারীর zoom position ঠিক থাকবে
 }
 
-// Click ocean to close
-svg.on("click", () => { if(selectedEl) closeDash(); });
+// ── SMART OCEAN CLICK — pan হলে close হবে না ──────────
+let _pointerDownPos = { x:0, y:0 };
+svg.on("pointerdown", (evt) => {
+  _pointerDownPos = { x: evt.clientX, y: evt.clientY };
+});
+svg.on("click", (evt) => {
+  const dx = Math.abs(evt.clientX - _pointerDownPos.x);
+  const dy = Math.abs(evt.clientY - _pointerDownPos.y);
+  if (dx < 6 && dy < 6 && selectedEl) closeDash();
+});
 </script>
 </body>
 </html>
