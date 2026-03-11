@@ -19,13 +19,45 @@ body.light {
   --tbg:rgba(0,100,180,0.05); --hud:rgba(220,238,252,0.97); --leg:rgba(220,238,252,0.94);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-serif;overflow:hidden;height:100vh;width:100vw;transition:background 0.4s,color 0.4s;}
+html,body{
+  height:100%;width:100%;
+  overflow:hidden; /* always hidden — map fills screen */
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Barlow Condensed',sans-serif;
+  transition:background 0.4s,color 0.4s;
+  touch-action:manipulation;
+}
 
-/* MAP */
-#map{width:100vw;height:100vh;z-index:1;}
+/* ── MAP ── */
+#map{
+  position:fixed;
+  inset:0;
+  width:100%;height:100%;
+  z-index:1;
+  /* GPU-composited layer — eliminates most map glitches */
+  will-change:transform;
+  -webkit-transform:translateZ(0);
+  transform:translateZ(0);
+}
+/* Keep leaflet tiles crisp on retina */
+.leaflet-tile{
+  image-rendering:-webkit-optimize-contrast;
+  image-rendering:crisp-edges;
+}
 
-/* HEADER */
-.hud{position:fixed;top:0;left:0;right:0;z-index:800;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:var(--hud);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);transition:background 0.4s,border-color 0.4s;}
+/* ── HEADER ── */
+.hud{
+  position:fixed;top:0;left:0;right:0;
+  z-index:800;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 16px;
+  background:var(--hud);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  transition:background .4s,border-color .4s;
+}
 .brand{font-family:'Orbitron',monospace;font-size:13px;font-weight:900;letter-spacing:3px;color:#fff;}
 body.light .brand{color:#0a1628;}
 .brand span{color:var(--c);}
@@ -34,85 +66,204 @@ body.light .brand-sub{color:rgba(0,100,180,0.5);}
 .hud-r{display:flex;align-items:center;gap:10px;}
 .live-node{display:flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:8px;color:var(--green);letter-spacing:2px;}
 .live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;box-shadow:0 0 10px var(--green);animation:lp 1.5s ease-in-out infinite;}
-@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(1.6)}}
+@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.6)}}
 #hud-clock{font-family:'Space Mono',monospace;font-size:10px;color:var(--c);letter-spacing:1px;}
 body.light #hud-clock{color:#0077cc;}
-.hud-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:0.2s;}
-.hud-btn:hover{background:rgba(0,229,255,0.12);border-color:var(--c);}
+.hud-btn{
+  width:34px;height:34px;border-radius:10px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.05);
+  color:var(--text);cursor:pointer;font-size:15px;
+  display:flex;align-items:center;justify-content:center;
+  transition:.2s;
+  /* bigger touch target */
+  min-width:44px;min-height:44px;
+}
 .hud-btn:active{transform:scale(0.9);}
 body.light .hud-btn{background:rgba(0,0,0,0.04);border-color:rgba(0,0,0,0.15);}
 
-/* LEGEND */
-.legend{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:14px;align-items:center;z-index:700;background:var(--leg);border:1px solid var(--border);padding:7px 18px;border-radius:30px;backdrop-filter:blur(16px);pointer-events:none;white-space:nowrap;transition:background 0.4s;}
+/* ── LEGEND ── */
+.legend{
+  position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+  display:flex;gap:14px;align-items:center;
+  z-index:700;
+  background:var(--leg);border:1px solid var(--border);
+  padding:7px 18px;border-radius:30px;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  pointer-events:none;white-space:nowrap;
+  transition:background .4s,opacity .3s,transform .3s;
+}
+.legend.hidden{opacity:0;transform:translateX(-50%) translateY(8px);}
 .leg-i{display:flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:7px;color:var(--text2);letter-spacing:1px;}
 .leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
-/* HINT */
-.hint{position:fixed;bottom:54px;left:50%;transform:translateX(-50%);font-family:'Space Mono',monospace;font-size:9px;color:rgba(0,229,255,0.45);letter-spacing:3px;text-align:center;pointer-events:none;z-index:600;animation:hf 3s ease-in-out infinite;}
-body.light .hint{color:rgba(0,100,180,0.5);}
-@keyframes hf{0%,100%{opacity:0.4}50%{opacity:0.9}}
-
-/* ZOOM RING */
-.zr{position:fixed;pointer-events:none;z-index:200;border-radius:50%;border:1.5px solid var(--c);animation:zra 0.8s ease-out forwards;opacity:0;}
-@keyframes zra{0%{transform:translate(-50%,-50%) scale(0.2);opacity:0.9}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
-
-/* DASHBOARD */
-#dash{position:fixed;top:60px;right:16px;width:320px;background:var(--card);border:1px solid var(--border);border-radius:20px;z-index:900;box-shadow:0 0 60px rgba(0,229,255,0.08),0 30px 80px rgba(0,0,0,0.5);display:none;overflow:hidden;max-height:calc(100vh - 76px);transition:background 0.4s,border-color 0.4s;animation:di 0.45s cubic-bezier(0.34,1.56,0.64,1) both;}
-@keyframes di{from{opacity:0;transform:translateX(20px) scale(0.95)}to{opacity:1;transform:translateX(0) scale(1)}}
-#dash::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,var(--c),transparent);}
-@media(max-width:600px){
-  #dash{top:auto!important;bottom:0;left:0;right:0;width:100%;border-radius:24px 24px 0 0;max-height:74vh;animation:dm 0.4s cubic-bezier(0.34,1.2,0.64,1) both;}
-  @keyframes dm{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-  .legend{gap:8px;padding:6px 12px;} .leg-i{font-size:6px;}
-  #hud-clock{display:none;} .brand{font-size:10px;}
+/* ── HINT ── */
+.hint{
+  position:fixed;bottom:54px;left:50%;transform:translateX(-50%);
+  font-family:'Space Mono',monospace;font-size:9px;
+  color:rgba(0,229,255,0.45);letter-spacing:3px;
+  text-align:center;pointer-events:none;z-index:600;
+  animation:hf 3s ease-in-out infinite;
+  transition:opacity .3s;
 }
-.drag-h{display:none;justify-content:center;padding:10px 0 4px;cursor:grab;}
-.drag-bar{width:40px;height:4px;border-radius:4px;background:var(--border);opacity:0.7;}
+body.light .hint{color:rgba(0,100,180,0.5);}
+@keyframes hf{0%,100%{opacity:.4}50%{opacity:.9}}
+.hint.hidden{opacity:0;}
+
+/* ── ZOOM RING ── */
+.zr{position:fixed;pointer-events:none;z-index:200;border-radius:50%;border:1.5px solid var(--c);animation:zra .8s ease-out forwards;opacity:0;}
+@keyframes zra{0%{transform:translate(-50%,-50%) scale(.2);opacity:.9}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
+
+/* ══════════════════════════════════════════════
+   DASHBOARD — BOTTOM SHEET (MOBILE) / SIDEBAR (DESKTOP)
+   Key fix: the sheet itself does NOT scroll.
+   Only the inner .stats div scrolls.
+   This prevents accidental swipe-to-close while reading.
+   ══════════════════════════════════════════════ */
+#dash{
+  position:fixed;
+  z-index:900;
+  display:none;
+  background:var(--card);
+  border:1px solid var(--border);
+  overflow:hidden; /* clip, not scroll */
+  transition:background .4s,border-color .4s;
+}
+/* ── DESKTOP layout ── */
+@media(min-width:601px){
+  #dash{
+    top:60px;right:16px;
+    width:320px;
+    border-radius:20px;
+    box-shadow:0 0 60px rgba(0,229,255,0.08),0 30px 80px rgba(0,0,0,0.5);
+    max-height:calc(100vh - 76px);
+    animation:di .45s cubic-bezier(.34,1.56,.64,1) both;
+    flex-direction:column;
+  }
+  @keyframes di{from{opacity:0;transform:translateX(20px) scale(.95)}to{opacity:1;transform:translateX(0) scale(1)}}
+  #dash::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,var(--c),transparent);}
+  #dash .stats{max-height:calc(100vh - 310px);}
+}
+/* ── MOBILE bottom sheet ── */
+@media(max-width:600px){
+  #dash{
+    bottom:0;left:0;right:0;
+    width:100%;
+    /* Fixed height — does NOT resize on scroll */
+    height:75vh;
+    border-radius:22px 22px 0 0;
+    box-shadow:0 -8px 40px rgba(0,0,0,0.6);
+    display:none;
+    flex-direction:column;
+    animation:dm .38s cubic-bezier(.32,1.2,.64,1) both;
+    /* Prevent the sheet from being affected by virtual keyboard or scroll */
+    -webkit-overflow-scrolling:touch;
+  }
+  @keyframes dm{from{transform:translateY(105%)}to{transform:translateY(0)}}
+  .legend{gap:8px;padding:6px 12px;}
+  .leg-i{font-size:6px;}
+  #hud-clock{display:none;}
+  .brand{font-size:10px;}
+}
+
+/* Drag handle — mobile only */
+.drag-h{
+  display:none;justify-content:center;
+  padding:10px 0 6px;
+  /* ONLY this area triggers swipe-to-close */
+  cursor:grab;
+  flex-shrink:0;
+  touch-action:none; /* let JS handle swipe here */
+}
+.drag-bar{width:40px;height:4px;border-radius:4px;background:var(--border);opacity:.7;}
 @media(max-width:600px){.drag-h{display:flex;}}
+
+/* Fixed top section — never scrolls */
+.dash-fixed{flex-shrink:0;}
 
 .dash-head{padding:14px 18px 12px;border-bottom:1px solid var(--sb);position:relative;}
 .d-flag{font-size:30px;margin-bottom:4px;}
 .d-name{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:var(--text);letter-spacing:2px;}
 .d-rank{font-family:'Space Mono',monospace;font-size:8px;color:var(--c);letter-spacing:2px;margin-top:3px;}
-.close-btn{position:absolute;top:12px;right:14px;width:28px;height:28px;border-radius:8px;border:1px solid var(--sb);background:rgba(255,255,255,0.04);color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:0.2s;}
-.close-btn:hover{border-color:var(--red);color:var(--red);}
+.close-btn{
+  position:absolute;top:12px;right:14px;
+  width:36px;height:36px; /* bigger tap target */
+  border-radius:8px;border:1px solid var(--sb);
+  background:rgba(255,255,255,0.04);
+  color:var(--text2);cursor:pointer;
+  font-size:14px;display:flex;align-items:center;justify-content:center;
+  transition:.2s;
+}
+.close-btn:active{transform:scale(.88);border-color:var(--red);color:var(--red);}
 
-.time-sec{padding:11px 18px;background:var(--tbg);border-bottom:1px solid var(--sb);display:flex;justify-content:space-between;align-items:center;}
+.time-sec{
+  padding:11px 18px;
+  background:var(--tbg);
+  border-bottom:1px solid var(--sb);
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
 .t-main{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--text);}
 .t-lbl{font-family:'Space Mono',monospace;font-size:8px;letter-spacing:2px;margin-top:2px;}
-.t-lbl.day{color:var(--gold);} .t-lbl.night{color:#818cf8;}
-.t-icon{font-size:32px;} .t-date{font-size:10px;color:var(--text2);margin-top:2px;}
+.t-lbl.day{color:var(--gold);}.t-lbl.night{color:#818cf8;}
+.t-icon{font-size:32px;}.t-date{font-size:10px;color:var(--text2);margin-top:2px;}
 
-.nuke{display:none;align-items:center;gap:8px;background:rgba(255,51,85,0.08);border:1px solid rgba(255,51,85,0.25);margin:8px 18px 4px;border-radius:10px;padding:7px 12px;font-family:'Space Mono',monospace;font-size:9px;color:var(--red);letter-spacing:1px;animation:np 2s ease-in-out infinite;}
+.nuke{
+  display:none;align-items:center;gap:8px;
+  background:rgba(255,51,85,0.08);border:1px solid rgba(255,51,85,0.25);
+  margin:8px 18px 4px;border-radius:10px;padding:7px 12px;
+  font-family:'Space Mono',monospace;font-size:9px;color:var(--red);letter-spacing:1px;
+  animation:np 2s ease-in-out infinite;flex-shrink:0;
+}
 @keyframes np{0%,100%{border-color:rgba(255,51,85,0.25)}50%{border-color:rgba(255,51,85,0.55)}}
 .nuke.show{display:flex;}
 
-.stats{overflow-y:auto;scrollbar-width:none;}
+/* ── SCROLLABLE stats area ── 
+   This is the ONLY scrollable element.
+   overflow-y:scroll with -webkit-overflow-scrolling for iOS momentum.
+   touch-action:pan-y so native scroll works without triggering map pan. */
+.stats{
+  flex:1;
+  overflow-y:scroll;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain; /* stops scroll bubbling to map */
+  scrollbar-width:none;
+  touch-action:pan-y; /* allow vertical scroll, block map pan */
+  /* bottom padding for safe area on notched phones */
+  padding-bottom:env(safe-area-inset-bottom,12px);
+}
 .stats::-webkit-scrollbar{display:none;}
-@media(min-width:601px){.stats{max-height:calc(100vh - 270px);}}
-@media(max-width:600px){.stats{max-height:36vh;}}
 
 .sec{padding:8px 18px 2px;}
 .sec-t{font-family:'Space Mono',monospace;font-size:7px;letter-spacing:3px;color:rgba(0,229,255,0.45);text-transform:uppercase;margin-bottom:6px;}
 body.light .sec-t{color:rgba(0,100,180,0.5);}
-.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--sb);}
+.row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--sb);}
 .row:last-child{border-bottom:none;}
 .rk{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;}
 .rv{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--text);}
-.rv.r{color:var(--red)} .rv.g{color:var(--green)} .rv.c{color:var(--c)} .rv.o{color:var(--gold)}
+.rv.r{color:var(--red)}.rv.g{color:var(--green)}.rv.c{color:var(--c)}.rv.o{color:var(--gold)}
 
 .pwr{padding:10px 18px 14px;border-top:1px solid var(--sb);}
 .pwr-l{font-family:'Space Mono',monospace;font-size:7px;letter-spacing:3px;color:rgba(0,229,255,0.4);margin-bottom:6px;}
 body.light .pwr-l{color:rgba(0,100,180,0.5);}
 .pwr-tr{background:rgba(255,255,255,0.06);border-radius:4px;height:6px;overflow:hidden;}
 body.light .pwr-tr{background:rgba(0,0,0,0.08);}
-.pwr-f{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);background:linear-gradient(90deg,var(--c),var(--c2));}
+.pwr-f{height:100%;border-radius:4px;width:0%;transition:width 1.2s cubic-bezier(.4,0,.2,1);background:linear-gradient(90deg,var(--c),var(--c2));}
 .pwr-ft{display:flex;justify-content:space-between;margin-top:4px;font-family:'Space Mono',monospace;font-size:7px;color:var(--text2);}
 
-/* Leaflet overrides */
+/* ── Leaflet overrides ── */
 .leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border-color:var(--border)!important;}
 .leaflet-control-attribution{display:none!important;}
-.leaflet-container{font-family:'Barlow Condensed',sans-serif!important;}
+.leaflet-container{font-family:'Barlow Condensed',sans-serif!important;background:#060e1a!important;}
+body.light .leaflet-container{background:#d4e8f8!important;}
+/* Zoom controls: bigger touch targets on mobile */
+@media(max-width:600px){
+  .leaflet-control-zoom a{width:36px!important;height:36px!important;line-height:36px!important;font-size:18px!important;}
+  .leaflet-control-zoom{margin-right:10px!important;margin-bottom:64px!important;}
+}
+
+/* ── Safe area insets (notch/home bar) ── */
+.legend{padding-bottom:max(7px,env(safe-area-inset-bottom));}
 </style>
 </head>
 <body>
@@ -133,23 +284,30 @@ body.light .pwr-tr{background:rgba(0,0,0,0.08);}
 <div id="map"></div>
 
 <div id="dash">
-  <div class="drag-h"><div class="drag-bar"></div></div>
-  <div class="dash-head">
-    <button class="close-btn" onclick="closeDash()">✕</button>
-    <div class="d-flag" id="d-flag">🌍</div>
-    <div class="d-name" id="d-name">—</div>
-    <div class="d-rank" id="d-rank">MILITARY RANK: —</div>
-  </div>
-  <div class="time-sec">
-    <div>
-      <div class="t-main" id="d-time">--:--</div>
-      <div class="t-lbl" id="d-dn">Loading...</div>
-      <div class="t-date" id="d-date">—</div>
+  <!-- Drag handle: ONLY area that triggers swipe-to-close on mobile -->
+  <div class="drag-h" id="dragHandle"><div class="drag-bar"></div></div>
+
+  <!-- Fixed (non-scrolling) top section -->
+  <div class="dash-fixed">
+    <div class="dash-head">
+      <button class="close-btn" onclick="closeDash()">✕</button>
+      <div class="d-flag" id="d-flag">🌍</div>
+      <div class="d-name" id="d-name">—</div>
+      <div class="d-rank" id="d-rank">MILITARY RANK: —</div>
     </div>
-    <div class="t-icon" id="d-icon">🌍</div>
+    <div class="time-sec">
+      <div>
+        <div class="t-main" id="d-time">--:--</div>
+        <div class="t-lbl" id="d-dn">Loading...</div>
+        <div class="t-date" id="d-date">—</div>
+      </div>
+      <div class="t-icon" id="d-icon">🌍</div>
+    </div>
+    <div class="nuke" id="nuke-badge">☢️ &nbsp; NUCLEAR ARMED STATE</div>
   </div>
-  <div class="nuke" id="nuke-badge">☢️ &nbsp; NUCLEAR ARMED STATE</div>
-  <div class="stats">
+
+  <!-- Scrollable area — scrolling here does NOT close the dashboard -->
+  <div class="stats" id="statsScroll">
     <div class="sec">
       <div class="sec-t">Nation Overview</div>
       <div class="row"><span class="rk">👥 Population</span><span class="rv c" id="d-pop">—</span></div>
@@ -174,23 +332,23 @@ body.light .pwr-tr{background:rgba(0,0,0,0.08);}
     </div>
     <div class="pwr">
       <div class="pwr-l">GLOBAL POWER INDEX</div>
-      <div class="pwr-tr"><div class="pwr-f" id="pwr-f" style="width:0%"></div></div>
+      <div class="pwr-tr"><div class="pwr-f" id="pwr-f"></div></div>
       <div class="pwr-ft"><span>WEAK</span><span id="pwr-s" style="color:var(--c)">—</span><span>SUPERPOWER</span></div>
     </div>
   </div>
 </div>
 
-<div class="legend">
+<div class="legend" id="legend">
   <div class="leg-i"><div class="leg-dot" style="background:rgba(0,229,255,0.35);border:2px solid #00e5ff;"></div>SELECTED</div>
   <div class="leg-i"><div class="leg-dot" style="background:rgba(255,51,85,0.35);border:2px solid #ff3355;"></div>NUCLEAR POWER</div>
-  <div class="leg-i">🖱️ CLICK COUNTRY</div>
+  <div class="leg-i">TAP COUNTRY</div>
 </div>
 
-<div class="hint" id="hint">▼ CLICK ANY COUNTRY FOR MILITARY INTELLIGENCE ▼</div>
+<div class="hint" id="hint">▼ TAP ANY COUNTRY FOR MILITARY INTEL ▼</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ══ MILITARY DB ══════════════════════════════════════
+/* ══ MILITARY DB ══════════════════════════════════════ */
 const DB = {
   "United States of America":{rank:1,flag:"🇺🇸",troops:"1,328,000",res:"799,500",jets:"13,247",heli:"5,768",tanks:"5,500",armor:"39,253",ships:"484",subs:"68",mis:"800+",nukes:"5,550",bud:"$886B",gdp:"$27.4T",power:99,tz:"America/New_York"},
   "Russia":{rank:2,flag:"🇷🇺",troops:"1,320,000",res:"2,000,000",jets:"4,173",heli:"1,543",tanks:"12,420",armor:"30,122",ships:"603",subs:"64",mis:"500+",nukes:"6,257",bud:"$109B",gdp:"$2.2T",power:96,tz:"Europe/Moscow"},
@@ -227,102 +385,142 @@ const DB = {
 const NUCLEAR = ["United States of America","United States","Russia","Russian Federation","China","United Kingdom","Great Britain","France","India","Pakistan","Israel","North Korea","Democratic People's Republic of Korea"];
 
 function norm(n){
-  const m={"United States":"United States of America","USA":"United States of America","Russian Federation":"Russia","People's Republic of China":"China","Great Britain":"United Kingdom","Democratic People's Republic of Korea":"North Korea","Korea, North":"North Korea","Korea, South":"South Korea","Republic of Korea":"South Korea","Türkiye":"Turkey","Czechia":"Czech Republic"};
+  const m={
+    "United States":"United States of America","USA":"United States of America",
+    "Russian Federation":"Russia","People's Republic of China":"China",
+    "Great Britain":"United Kingdom","Democratic People's Republic of Korea":"North Korea",
+    "Korea, North":"North Korea","Korea, South":"South Korea",
+    "Republic of Korea":"South Korea","Türkiye":"Turkey","Czechia":"Czech Republic"
+  };
   return m[n]||n;
 }
 
-// ══ MAP ══════════════════════════════════════════════
+/* ══ MAP INIT ══════════════════════════════════════════ */
 let isLight=false, geoLayer=null, selLayer=null, clockInt=null;
 
-const map = L.map('map',{center:[20,10],zoom:3,zoomControl:true,minZoom:2,maxZoom:12,worldCopyJump:true});
+const map = L.map('map',{
+  center:[20,10],zoom:3,
+  zoomControl:true,
+  minZoom:2,maxZoom:12,
+  worldCopyJump:true,
+  /* CRITICAL mobile fixes: */
+  tap:false,           /* disable leaflet's broken tap shim — use native touch */
+  tapTolerance:10,
+  bounceAtZoomLimits:false,
+  preferCanvas:true,   /* GPU canvas renderer — eliminates tile glitches */
+  renderer:L.canvas({padding:0.5}),
+});
 
-// Tile layers — CartoDB Dark (with labels) and CartoDB Voyager (light with labels)
-const darkTile  = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'});
-const lightTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'});
+/* Tile layers */
+const darkTile  = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',keepBuffer:4,updateWhenIdle:false,updateWhenZooming:false});
+const lightTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',keepBuffer:4,updateWhenIdle:false,updateWhenZooming:false});
 darkTile.addTo(map);
 
-// ── GeoJSON styles ────────────────────────────────────
+/* Reposition zoom controls above legend on mobile */
+map.zoomControl.setPosition('bottomright');
+
+/* ── GeoJSON styles ── */
 function cStyle(f){
-  const nm = norm(f.properties.ADMIN||f.properties.name||"");
-  const nk = NUCLEAR.includes(nm);
+  const nm=norm(f.properties.ADMIN||f.properties.name||"");
+  const nk=NUCLEAR.includes(nm);
   return nk
-    ? {fillColor:'rgba(255,51,85,0.18)',color:'#ff3355',weight:1.5,fillOpacity:1,opacity:0.7}
-    : {fillColor:'rgba(0,229,255,0.06)',color:'rgba(0,229,255,0.3)',weight:0.8,fillOpacity:1,opacity:1};
+    ?{fillColor:'rgba(255,51,85,0.18)',color:'#ff3355',weight:1.5,fillOpacity:1,opacity:0.7}
+    :{fillColor:'rgba(0,229,255,0.06)',color:'rgba(0,229,255,0.3)',weight:0.8,fillOpacity:1,opacity:1};
 }
 function hStyle(f){
-  const nm = norm(f.properties.ADMIN||f.properties.name||"");
+  const nm=norm(f.properties.ADMIN||f.properties.name||"");
   return NUCLEAR.includes(nm)
-    ? {fillColor:'rgba(255,51,85,0.42)',color:'#ff3355',weight:2,fillOpacity:1}
-    : {fillColor:'rgba(0,229,255,0.32)',color:'#00e5ff',weight:2,fillOpacity:1};
+    ?{fillColor:'rgba(255,51,85,0.42)',color:'#ff3355',weight:2,fillOpacity:1}
+    :{fillColor:'rgba(0,229,255,0.32)',color:'#00e5ff',weight:2,fillOpacity:1};
 }
-function sStyle(){
-  return {fillColor:'rgba(0,229,255,0.42)',color:'#00e5ff',weight:3,fillOpacity:1};
-}
-function sStyleNuke(){
-  return {fillColor:'rgba(255,51,85,0.48)',color:'#ff3355',weight:3,fillOpacity:1};
-}
+const sStyle    =()=>({fillColor:'rgba(0,229,255,0.42)',color:'#00e5ff',weight:3,fillOpacity:1});
+const sStyleNuke=()=>({fillColor:'rgba(255,51,85,0.48)',color:'#ff3355',weight:3,fillOpacity:1});
 
-// ── Load GeoJSON ──────────────────────────────────────
+/* ── Load GeoJSON ── */
 fetch("https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson")
   .then(r=>r.json())
   .then(data=>{
     geoLayer = L.geoJSON(data,{
-      style: cStyle,
+      style:cStyle,
       onEachFeature:(feat,layer)=>{
-        const raw = feat.properties.ADMIN||feat.properties.name||"Unknown";
-        const name = norm(raw);
-        const isNk = NUCLEAR.includes(name);
+        const raw=feat.properties.ADMIN||feat.properties.name||"Unknown";
+        const name=norm(raw);
+        const isNk=NUCLEAR.includes(name);
 
+        /* Desktop hover */
         layer.on('mouseover',function(e){
           if(this!==selLayer) this.setStyle(hStyle(feat));
-          this.bindTooltip(`<span style="font-family:'Space Mono',monospace;font-size:11px;color:${isNk?'#ff8899':'#00e5ff'}">${raw}</span>`,
-            {sticky:true,opacity:1,className:'intel-tip'}).openTooltip(e.latlng);
+          this.bindTooltip(
+            `<span style="font-family:'Space Mono',monospace;font-size:11px;color:${isNk?'#ff8899':'#00e5ff'}">${raw}</span>`,
+            {sticky:true,opacity:1,className:'intel-tip'}
+          ).openTooltip(e.latlng);
         });
         layer.on('mouseout',function(){
           if(this!==selLayer) geoLayer.resetStyle(this);
           this.closeTooltip();
         });
+
+        /* Click / tap */
         layer.on('click',function(e){
           L.DomEvent.stopPropagation(e);
           if(selLayer&&selLayer!==this) geoLayer.resetStyle(selLayer);
-          selLayer = this;
-          this.setStyle(isNk ? sStyleNuke() : sStyle());
+          selLayer=this;
+          this.setStyle(isNk?sStyleNuke():sStyle());
           this.bringToFront();
-          spawnRing(e.originalEvent.clientX, e.originalEvent.clientY);
+          spawnRing(e.originalEvent.clientX,e.originalEvent.clientY);
           map.flyToBounds(layer.getBounds(),{duration:1.2,padding:[80,80],maxZoom:7});
           openDash(name);
-          document.getElementById('hint').style.display='none';
         });
       }
     }).addTo(map);
   });
 
-// ── Zoom ring ─────────────────────────────────────────
+/* ── Zoom ring ── */
 function spawnRing(x,y){
   const r=document.createElement('div');
-  r.className='zr'; r.style.cssText=`left:${x}px;top:${y}px;width:60px;height:60px;`;
-  document.body.appendChild(r); setTimeout(()=>r.remove(),900);
+  r.className='zr';
+  r.style.cssText=`left:${x}px;top:${y}px;width:60px;height:60px;`;
+  document.body.appendChild(r);
+  setTimeout(()=>r.remove(),900);
 }
 
-// ── Open dashboard ────────────────────────────────────
+/* ── Open dashboard ── */
 function openDash(name){
   const d=document.getElementById('dash');
-  d.style.display='block'; d.style.animation='none'; d.offsetHeight;
-  d.style.animation=window.innerWidth<=600?'dm 0.4s cubic-bezier(0.34,1.2,0.64,1) both':'di 0.45s cubic-bezier(0.34,1.56,0.64,1) both';
+  const mobile=window.innerWidth<=600;
+
+  /* Reset scroll position every time */
+  document.getElementById('statsScroll').scrollTop=0;
+
+  d.style.display='flex';
+  /* re-trigger animation */
+  d.style.animation='none';
+  void d.offsetHeight;
+  d.style.animation=mobile
+    ?'dm .38s cubic-bezier(.32,1.2,.64,1) both'
+    :'di .45s cubic-bezier(.34,1.56,.64,1) both';
+
+  /* Hide legend & hint while dash is open on mobile (less clutter) */
+  if(mobile){
+    document.getElementById('legend').classList.add('hidden');
+    document.getElementById('hint').classList.add('hidden');
+  } else {
+    document.getElementById('hint').classList.add('hidden');
+  }
 
   const m=DB[name]||null;
   const tz=m?.tz||'UTC';
-  s('d-flag', m?.flag||'🌍');
-  s('d-name', name.toUpperCase());
-  s('d-rank', m?.rank?`MILITARY RANK: #${m.rank} GLOBALLY`:'MILITARY RANK: CLASSIFIED');
-  s('d-troops',m?.troops); s('d-res',m?.res);
-  s('d-jets',m?.jets);     s('d-heli',m?.heli);
-  s('d-tanks',m?.tanks);   s('d-armor',m?.armor);
-  s('d-ships',m?.ships);   s('d-subs',m?.subs);
-  s('d-mis',m?.mis);       s('d-nukes',m?.nukes,'None');
-  s('d-bud',m?.bud);       s('d-gdp',m?.gdp);
+  sv('d-flag',m?.flag||'🌍');
+  sv('d-name',name.toUpperCase());
+  sv('d-rank',m?.rank?`MILITARY RANK: #${m.rank} GLOBALLY`:'MILITARY RANK: CLASSIFIED');
+  sv('d-troops',m?.troops); sv('d-res',m?.res);
+  sv('d-jets',m?.jets);     sv('d-heli',m?.heli);
+  sv('d-tanks',m?.tanks);   sv('d-armor',m?.armor);
+  sv('d-ships',m?.ships);   sv('d-subs',m?.subs);
+  sv('d-mis',m?.mis);       sv('d-nukes',m?.nukes,'None');
+  sv('d-bud',m?.bud);       sv('d-gdp',m?.gdp);
 
-  const isNk = NUCLEAR.includes(name)||(m?.nukes&&m.nukes!=='None'&&m.nukes!=='N/A');
+  const isNk=NUCLEAR.includes(name)||(m?.nukes&&m.nukes!=='None'&&m.nukes!=='N/A');
   document.getElementById('nuke-badge').classList.toggle('show',isNk);
   const pw=m?.power||8;
   document.getElementById('pwr-f').style.width=pw+'%';
@@ -330,36 +528,42 @@ function openDash(name){
 
   fetchAPI(name,tz);
   if(clockInt) clearInterval(clockInt);
-  tick(tz); clockInt=setInterval(()=>tick(tz),1000);
+  tick(tz);
+  clockInt=setInterval(()=>tick(tz),1000);
 }
 
-function s(id,val,fb='N/A'){document.getElementById(id).textContent=val||fb;}
+function sv(id,val,fb='N/A'){
+  const el=document.getElementById(id);
+  if(el) el.textContent=val||fb;
+}
 
-// ── API fetch ─────────────────────────────────────────
+/* ── API fetch ── */
 async function fetchAPI(name,defTz){
   try{
     const r=await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fullText=true`);
-    const d=await r.json(); if(!d||d.status===404) throw 0;
+    const d=await r.json();
+    if(!d||d.status===404) throw 0;
     const c=d[0];
-    s('d-pop',c.population?c.population.toLocaleString('en-US')+' people':null);
-    s('d-cap',c.capital?.[0]);
-    s('d-area',c.area?c.area.toLocaleString('en-US')+' km²':null);
-    s('d-reg',(c.region||'')+(c.subregion?' · '+c.subregion:''));
+    sv('d-pop',c.population?c.population.toLocaleString('en-US')+' people':null);
+    sv('d-cap',c.capital?.[0]);
+    sv('d-area',c.area?c.area.toLocaleString('en-US')+' km²':null);
+    sv('d-reg',(c.region||'')+(c.subregion?' · '+c.subregion:''));
     const tz=c.timezones?.[0];
     if(tz&&!DB[name]?.tz){
       const rtz=tz.includes('/')?tz:'UTC';
       if(clockInt) clearInterval(clockInt);
-      tick(rtz); clockInt=setInterval(()=>tick(rtz),1000);
+      tick(rtz);
+      clockInt=setInterval(()=>tick(rtz),1000);
     }
-  }catch(e){s('d-pop','Data unavailable');}
+  }catch(e){sv('d-pop','Data unavailable');}
 }
 
-// ── Clock ─────────────────────────────────────────────
+/* ── Clock ── */
 function tick(tz){
   try{
     const now=new Date();
-    s('d-time',now.toLocaleTimeString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}));
-    s('d-date',now.toLocaleDateString('en-US',{timeZone:tz,weekday:'long',month:'short',day:'numeric',year:'numeric'}));
+    sv('d-time',now.toLocaleTimeString('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}));
+    sv('d-date',now.toLocaleDateString('en-US',{timeZone:tz,weekday:'long',month:'short',day:'numeric',year:'numeric'}));
     const h=parseInt(now.toLocaleString('en-US',{timeZone:tz,hour:'numeric',hour12:false}));
     let icon,label,cls;
     if(h>=5&&h<12){icon='🌄';label='MORNING';cls='day';}
@@ -367,29 +571,63 @@ function tick(tz){
     else if(h>=17&&h<21){icon='🌅';label='EVENING';cls='day';}
     else{icon='🌙';label='NIGHT';cls='night';}
     const el=document.getElementById('d-dn');
-    el.textContent=label; el.className='t-lbl '+cls;
+    el.textContent=label;el.className='t-lbl '+cls;
     document.getElementById('d-icon').textContent=icon;
   }catch(e){}
 }
 
-// ── Close ─────────────────────────────────────────────
+/* ── Close dashboard ── */
 function closeDash(){
-  document.getElementById('dash').style.display='none';
+  const d=document.getElementById('dash');
+  const mobile=window.innerWidth<=600;
+
+  /* Slide-out animation then hide */
+  d.style.transition='transform .28s ease-in, opacity .28s ease-in';
+  d.style.transform=mobile?'translateY(105%)':'translateX(20px)';
+  d.style.opacity='0';
+  setTimeout(()=>{
+    d.style.display='none';
+    d.style.transform='';
+    d.style.opacity='';
+    d.style.transition='';
+  },300);
+
   if(selLayer){geoLayer.resetStyle(selLayer);selLayer=null;}
   if(clockInt){clearInterval(clockInt);clockInt=null;}
-  document.getElementById('hint').style.display='block';
-  // No zoom reset — stays where user is
+
+  document.getElementById('legend').classList.remove('hidden');
+  document.getElementById('hint').classList.remove('hidden');
 }
 
-// Click ocean → close (only real click, not pan)
+/* ── Ocean click → close ── */
 let _pd={x:0,y:0};
 map.on('mousedown',(e)=>{_pd={x:e.originalEvent.clientX,y:e.originalEvent.clientY};});
 map.on('click',(e)=>{
-  const dx=Math.abs(e.originalEvent.clientX-_pd.x),dy=Math.abs(e.originalEvent.clientY-_pd.y);
+  const dx=Math.abs(e.originalEvent.clientX-_pd.x);
+  const dy=Math.abs(e.originalEvent.clientY-_pd.y);
   if(dx<5&&dy<5&&selLayer) closeDash();
 });
 
-// ── Theme toggle ──────────────────────────────────────
+/* ══ SWIPE TO CLOSE — drag handle ONLY ══════════════════
+   The swipe gesture is attached EXCLUSIVELY to the drag handle.
+   Scrolling inside .stats has no effect on the dashboard visibility.
+   ════════════════════════════════════════════════════════ */
+const dragHandle=document.getElementById('dragHandle');
+let _swipeStartY=0, _swipeT=0;
+
+dragHandle.addEventListener('touchstart',e=>{
+  _swipeStartY=e.touches[0].clientY;
+  _swipeT=Date.now();
+},{passive:true});
+
+dragHandle.addEventListener('touchend',e=>{
+  const dy=e.changedTouches[0].clientY-_swipeStartY;
+  const dt=Date.now()-_swipeT;
+  /* Close only on a clear downward swipe from the handle */
+  if(dy>60||(dy>30&&dt<250)) closeDash();
+},{passive:true});
+
+/* ── Theme toggle ── */
 function toggleTheme(){
   isLight=!isLight;
   document.body.classList.toggle('light',isLight);
@@ -399,19 +637,45 @@ function toggleTheme(){
   if(geoLayer) geoLayer.setStyle(cStyle);
 }
 
-// ── Global clock ──────────────────────────────────────
-setInterval(()=>{document.getElementById('hud-clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});},1000);
+/* ── Global clock ── */
+setInterval(()=>{
+  document.getElementById('hud-clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
+},1000);
 
-// ── Mobile swipe to close ─────────────────────────────
-const dash=document.getElementById('dash');
-let _ty=0,_tt=0;
-dash.addEventListener('touchstart',e=>{_ty=e.touches[0].clientY;_tt=Date.now();},{passive:true});
-dash.addEventListener('touchend',e=>{const dy=e.changedTouches[0].clientY-_ty;if(dy>80||(dy>40&&Date.now()-_tt<300))closeDash();},{passive:true});
-
-// ── Tooltip style ─────────────────────────────────────
+/* ── Tooltip style ── */
 const st=document.createElement('style');
-st.textContent=`.intel-tip .leaflet-tooltip{background:rgba(6,14,26,0.95)!important;border:1px solid rgba(0,229,255,0.35)!important;border-radius:8px!important;padding:6px 12px!important;color:#00e5ff!important;font-size:11px!important;box-shadow:0 6px 20px rgba(0,0,0,0.5)!important;}.intel-tip .leaflet-tooltip::before{display:none!important;}body.light .intel-tip .leaflet-tooltip{background:rgba(240,248,255,0.97)!important;border-color:rgba(0,100,200,0.3)!important;color:#0077cc!important;}`;
+st.textContent=`
+  .intel-tip .leaflet-tooltip{
+    background:rgba(6,14,26,0.95)!important;
+    border:1px solid rgba(0,229,255,0.35)!important;
+    border-radius:8px!important;padding:6px 12px!important;
+    color:#00e5ff!important;font-size:11px!important;
+    box-shadow:0 6px 20px rgba(0,0,0,0.5)!important;
+  }
+  .intel-tip .leaflet-tooltip::before{display:none!important;}
+  body.light .intel-tip .leaflet-tooltip{
+    background:rgba(240,248,255,0.97)!important;
+    border-color:rgba(0,100,200,0.3)!important;
+    color:#0077cc!important;
+  }
+`;
 document.head.appendChild(st);
+
+/* ── Prevent double-tap zoom on map (iOS) ── */
+let _lastTap=0;
+document.getElementById('map').addEventListener('touchend',e=>{
+  const now=Date.now();
+  if(now-_lastTap<300) e.preventDefault();
+  _lastTap=now;
+},{passive:false});
+
+/* ── Invalidate map size on orientation change ── */
+window.addEventListener('orientationchange',()=>{
+  setTimeout(()=>map.invalidateSize({animate:false}),350);
+});
+window.addEventListener('resize',()=>{
+  map.invalidateSize({animate:false});
+});
 </script>
 </body>
 </html>
