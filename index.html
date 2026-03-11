@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GLOBAL INTEL | FAHIM EDITION</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Barlow+Condensed:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --c:    #00e5ff;
+  --c2:   #40f0ff;
+  --red:  #ff3355;
+  --gold: #ffaa00;
+  --green:#00e676;
+  --bg:   #020912;
+  --bg2:  #040e1c;
+  --card: rgba(4,14,28,0.97);
+  --border: rgba(0,229,255,0.18);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: #ddeeff;
+  font-family: 'Barlow Condensed', sans-serif;
+  overflow: hidden;
+  height: 100vh; width: 100vw;
+  cursor: crosshair;
+}
+
+/* ── ATMOSPHERE ── */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(0,30,60,0.6) 0%, transparent 70%),
+    radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,229,255,0.03) 0%, transparent 60%);
+}
+
+/* ── SCANLINE ── */
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 3px);
+}
+
+/* ── MAP SVG ── */
+#map-svg { width:100vw; height:100vh; display:block; position:relative; z-index:1; }
+
+.country {
+  fill: #0d1f35;
+  stroke: #0a2040;
+  stroke-width: 0.4;
+  cursor: pointer;
+  transition: fill 0.2s;
+}
+.country:hover { fill: rgba(0,229,255,0.25); stroke: var(--c); stroke-width: 0.8; }
+.country.selected { fill: rgba(0,229,255,0.2); stroke: var(--c); stroke-width: 1.2; }
+.country.nuclear { fill: rgba(255,51,85,0.08); }
+.country.nuclear:hover { fill: rgba(255,51,85,0.3); stroke: var(--red); }
+.country.nuclear.selected { fill: rgba(255,51,85,0.2); stroke: var(--red); }
+
+/* Ocean */
+.ocean { fill: #010d1e; }
+
+/* ── HEADER ── */
+.hud-top {
+  position:fixed; top:0; left:0; right:0; z-index:500;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 20px;
+  background: linear-gradient(180deg, rgba(2,9,18,0.98) 0%, transparent 100%);
+  pointer-events:none;
+}
+.brand {
+  font-family:'Orbitron',monospace; font-size:13px; font-weight:900;
+  letter-spacing:4px; color:#fff;
+  text-shadow: 0 0 20px rgba(0,229,255,0.5);
+}
+.brand span { color:var(--c); }
+.brand-sub { font-family:'Space Mono',monospace; font-size:7px; color:rgba(0,229,255,0.4); letter-spacing:3px; margin-top:2px; }
+
+.hud-right { display:flex; align-items:center; gap:16px; }
+.live-node { display:flex; align-items:center; gap:6px; font-family:'Space Mono',monospace; font-size:9px; color:var(--green); letter-spacing:2px; }
+.live-dot { width:6px; height:6px; background:var(--green); border-radius:50%; box-shadow:0 0 10px var(--green); animation:pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.6)} }
+
+#hud-clock { font-family:'Space Mono',monospace; font-size:11px; color:var(--c); letter-spacing:2px; }
+
+/* ── BOTTOM LEGEND ── */
+.legend {
+  position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+  display:flex; gap:20px; align-items:center; z-index:500;
+  background: rgba(2,9,18,0.9); border:1px solid var(--border);
+  padding:8px 20px; border-radius:30px; backdrop-filter:blur(16px);
+  pointer-events:none;
+}
+.leg-item { display:flex; align-items:center; gap:6px; font-family:'Space Mono',monospace; font-size:8px; color:rgba(255,255,255,0.5); letter-spacing:1px; }
+.leg-dot  { width:8px; height:8px; border-radius:50%; }
+
+/* ── HINT ── */
+.hint {
+  position:fixed; bottom:60px; left:50%; transform:translateX(-50%);
+  font-family:'Space Mono',monospace; font-size:9px; color:rgba(0,229,255,0.4);
+  letter-spacing:3px; text-align:center; pointer-events:none; z-index:400;
+  animation: hintFade 3s ease-in-out infinite;
+}
+@keyframes hintFade { 0%,100%{opacity:0.4} 50%{opacity:0.8} }
+
+/* ── ZOOM RING ── */
+.zoom-ring {
+  position:fixed; pointer-events:none; z-index:200;
+  border-radius:50%; border:1.5px solid var(--c);
+  animation: zoomRingAnim 0.8s ease-out forwards;
+  opacity:0;
+}
+@keyframes zoomRingAnim {
+  0%  { transform:translate(-50%,-50%) scale(0.2); opacity:0.8; }
+  100%{ transform:translate(-50%,-50%) scale(3);   opacity:0; }
+}
+
+/* ── DASHBOARD ── */
+#dashboard {
+  position:fixed; top:70px; right:20px; width:330px;
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius:20px; z-index:600;
+  box-shadow: 0 0 60px rgba(0,229,255,0.08), 0 30px 80px rgba(0,0,0,0.8);
+  display:none; overflow:hidden;
+  animation: dashIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes dashIn { from{opacity:0;transform:translateX(30px) scale(0.95)} to{opacity:1;transform:translateX(0) scale(1)} }
+
+/* Top accent */
+#dashboard::before {
+  content:''; position:absolute; top:0; left:15%; right:15%; height:1px;
+  background: linear-gradient(90deg, transparent, var(--c), transparent);
+}
+
+.dash-header {
+  padding:18px 20px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  position:relative;
+}
+.dash-flag { font-size:32px; margin-bottom:6px; }
+.dash-country { font-family:'Orbitron',monospace; font-size:16px; font-weight:700; color:#fff; letter-spacing:2px; }
+.dash-rank    { font-family:'Space Mono',monospace; font-size:9px; color:var(--c); letter-spacing:2px; margin-top:3px; }
+
+.close-btn {
+  position:absolute; top:14px; right:16px; width:28px; height:28px;
+  border-radius:8px; border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.5);
+  cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
+  transition:0.2s; pointer-events:all;
+}
+.close-btn:hover { border-color:var(--red); color:var(--red); }
+
+/* Time box */
+.time-section {
+  padding:12px 20px;
+  background: rgba(0,229,255,0.04);
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.time-main { font-family:'Orbitron',monospace; font-size:22px; font-weight:700; color:#fff; }
+.time-label { font-family:'Space Mono',monospace; font-size:8px; letter-spacing:2px; margin-top:2px; }
+.time-label.day   { color:var(--gold); }
+.time-label.night { color:#818cf8; }
+.day-night-icon   { font-size:36px; }
+
+/* Stats */
+.stats-scroll { max-height:340px; overflow-y:auto; scrollbar-width:none; }
+.stats-scroll::-webkit-scrollbar { display:none; }
+
+.stat-section { padding:10px 20px 4px; }
+.stat-section-title {
+  font-family:'Space Mono',monospace; font-size:7px; letter-spacing:3px;
+  color:rgba(0,229,255,0.4); text-transform:uppercase; margin-bottom:8px;
+}
+
+.stat-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.stat-row:last-child { border-bottom:none; }
+.stat-key  { font-size:12px; color:rgba(255,255,255,0.55); display:flex; align-items:center; gap:7px; }
+.stat-val  { font-family:'Space Mono',monospace; font-size:11px; font-weight:700; color:#fff; }
+.stat-val.danger { color:var(--red); }
+.stat-val.gold   { color:var(--gold); }
+.stat-val.cyan   { color:var(--c); }
+.stat-val.green  { color:var(--green); }
+
+/* Power bar */
+.power-bar-wrap { padding:12px 20px 14px; border-top:1px solid rgba(255,255,255,0.05); }
+.power-label { font-family:'Space Mono',monospace; font-size:7px; letter-spacing:3px; color:rgba(0,229,255,0.4); margin-bottom:6px; }
+.power-track { background:rgba(255,255,255,0.06); border-radius:4px; height:6px; overflow:hidden; }
+.power-fill  { height:100%; border-radius:4px; transition:width 1.2s cubic-bezier(0.4,0,0.2,1); }
+
+/* Nuclear badge */
+.nuclear-badge {
+  display:none; align-items:center; gap:8px;
+  background:rgba(255,51,85,0.08); border:1px solid rgba(255,51,85,0.25);
+  margin:0 20px 10px; border-radius:10px; padding:8px 12px;
+  font-family:'Space Mono',monospace; font-size:9px; color:var(--red); letter-spacing:1px;
+  animation: nuclearPulse 2s ease-in-out infinite;
+}
+@keyframes nuclearPulse { 0%,100%{border-color:rgba(255,51,85,0.25)} 50%{border-color:rgba(255,51,85,0.5)} }
+.nuclear-badge.show { display:flex; }
+
+/* ── COUNTRY LABEL TOOLTIP ── */
+.country-tooltip {
+  position:fixed; pointer-events:none; z-index:400;
+  background:rgba(4,14,28,0.95); border:1px solid var(--border);
+  padding:6px 12px; border-radius:8px; font-family:'Space Mono',monospace;
+  font-size:10px; color:var(--c); letter-spacing:1px;
+  backdrop-filter:blur(10px);
+  transition:opacity 0.15s;
+  opacity:0;
+}
+</style>
+</head>
+<body>
+
+<!-- HUD TOP -->
+<div class="hud-top">
+  <div>
+    <div class="brand">GLOBAL <span>INTEL</span></div>
+    <div class="brand-sub">MILITARY INTELLIGENCE SYSTEM · FAHIM EDITION</div>
+  </div>
+  <div class="hud-right">
+    <div class="live-node"><div class="live-dot"></div>LIVE FEED</div>
+    <div id="hud-clock">--:--:--</div>
+  </div>
+</div>
+
+<!-- MAP -->
+<svg id="map-svg">
+  <rect class="ocean" width="100%" height="100%"/>
+</svg>
+
+<!-- TOOLTIP -->
+<div class="country-tooltip" id="tooltip"></div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="dash-header">
+    <button class="close-btn" onclick="closeDash()">✕</button>
+    <div class="dash-flag" id="d-flag">🌍</div>
+    <div class="dash-country" id="d-name">—</div>
+    <div class="dash-rank" id="d-rank">MILITARY RANK: —</div>
+  </div>
+
+  <div class="time-section">
+    <div>
+      <div class="time-main" id="d-time">--:--</div>
+      <div class="time-label" id="d-daynight">Loading...</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px;" id="d-date">—</div>
+    </div>
+    <div class="day-night-icon" id="d-icon">🌍</div>
+  </div>
+
+  <div class="nuclear-badge" id="nuclear-badge">
+    ☢️ &nbsp; NUCLEAR ARMED STATE
+  </div>
+
+  <div class="stats-scroll">
+    <div class="stat-section">
+      <div class="stat-section-title">Nation Overview</div>
+      <div class="stat-row"><span class="stat-key">👥 Population</span><span class="stat-val cyan" id="d-pop">—</span></div>
+      <div class="stat-row"><span class="stat-key">🌐 Capital</span><span class="stat-val" id="d-capital">—</span></div>
+      <div class="stat-row"><span class="stat-key">📐 Area</span><span class="stat-val" id="d-area">—</span></div>
+      <div class="stat-row"><span class="stat-key">💰 GDP</span><span class="stat-val gold" id="d-gdp">—</span></div>
+      <div class="stat-row"><span class="stat-key">🏳️ Region</span><span class="stat-val" id="d-region">—</span></div>
+    </div>
+
+    <div class="stat-section">
+      <div class="stat-section-title">Military Strength</div>
+      <div class="stat-row"><span class="stat-key">👨‍✈️ Active Personnel</span><span class="stat-val green" id="d-troops">—</span></div>
+      <div class="stat-row"><span class="stat-key">🪖 Reserve Forces</span><span class="stat-val" id="d-reserve">—</span></div>
+      <div class="stat-row"><span class="stat-key">✈️ Fighter Jets</span><span class="stat-val cyan" id="d-jets">—</span></div>
+      <div class="stat-row"><span class="stat-key">🚁 Helicopters</span><span class="stat-val" id="d-heli">—</span></div>
+      <div class="stat-row"><span class="stat-key">🛡️ Tanks</span><span class="stat-val gold" id="d-tanks">—</span></div>
+      <div class="stat-row"><span class="stat-key">🚗 Armored Vehicles</span><span class="stat-val" id="d-armored">—</span></div>
+      <div class="stat-row"><span class="stat-key">🚢 Naval Vessels</span><span class="stat-val cyan" id="d-ships">—</span></div>
+      <div class="stat-row"><span class="stat-key">🛥️ Submarines</span><span class="stat-val" id="d-subs">—</span></div>
+      <div class="stat-row"><span class="stat-key">🚀 Missile Systems</span><span class="stat-val gold" id="d-missiles">—</span></div>
+      <div class="stat-row"><span class="stat-key">💣 Nuclear Warheads</span><span class="stat-val danger" id="d-nukes">—</span></div>
+      <div class="stat-row"><span class="stat-key">💵 Defense Budget</span><span class="stat-val gold" id="d-budget">—</span></div>
+    </div>
+
+    <div class="power-bar-wrap">
+      <div class="power-label">GLOBAL POWER INDEX</div>
+      <div class="power-track">
+        <div class="power-fill" id="power-fill" style="width:0%;background:linear-gradient(90deg,var(--c),var(--c2));"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-family:'Space Mono',monospace;font-size:7px;color:rgba(255,255,255,0.3);">
+        <span>WEAK</span><span id="power-score" style="color:var(--c);">—</span><span>SUPERPOWER</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="leg-item"><div class="leg-dot" style="background:#0d1f35;border:1px solid #0a2040;"></div>COUNTRY</div>
+  <div class="leg-item"><div class="leg-dot" style="background:rgba(0,229,255,0.25);border:1px solid var(--c);"></div>SELECTED</div>
+  <div class="leg-item"><div class="leg-dot" style="background:rgba(255,51,85,0.2);border:1px solid var(--red);"></div>NUCLEAR POWER</div>
+  <div class="leg-item" style="margin-left:8px;">🖱️ CLICK TO INSPECT</div>
+</div>
+
+<div class="hint" id="hint">▼ CLICK ANY COUNTRY TO ACCESS INTELLIGENCE ▼</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  MILITARY DATABASE (2024 Data)
+// ══════════════════════════════════════════════
+const MILDB = {
+  "United States of America": {
+    rank:1, flag:"🇺🇸", troops:"1,328,000", reserve:"799,500",
+    jets:"13,247", heli:"5,768", tanks:"5,500", armored:"39,253",
+    ships:"484", subs:"68", missiles:"800+", nukes:"5,550",
+    budget:"$886 Billion", gdp:"$27.4T", power:99,
+    tz:"America/New_York"
+  },
+  "Russia": {
+    rank:2, flag:"🇷🇺", troops:"1,320,000", reserve:"2,000,000",
+    jets:"4,173", heli:"1,543", tanks:"12,420", armored:"30,122",
+    ships:"603", subs:"64", missiles:"500+", nukes:"6,257",
+    budget:"$109 Billion", gdp:"$2.2T", power:96,
+    tz:"Europe/Moscow"
+  },
+  "China": {
+    rank:3, flag:"🇨🇳", troops:"2,035,000", reserve:"510,000",
+    jets:"3,285", heli:"912", tanks:"5,000", armored:"35,000",
+    ships:"777", subs:"79", missiles:"350+", nukes:"410",
+    budget:"$292 Billion", gdp:"$17.7T", power:94,
+    tz:"Asia/Shanghai"
+  },
+  "India": {
+    rank:4, flag:"🇮🇳", troops:"1,455,550", reserve:"1,155,000",
+    jets:"2,229", heli:"722", tanks:"4,614", armored:"8,600",
+    ships:"293", subs:"16", missiles:"200+", nukes:"160",
+    budget:"$83.6 Billion", gdp:"$3.7T", power:83,
+    tz:"Asia/Kolkata"
+  },
+  "South Korea": {
+    rank:5, flag:"🇰🇷", troops:"500,000", reserve:"3,100,000",
+    jets:"1,579", heli:"739", tanks:"2,130", armored:"8,861",
+    ships:"234", subs:"22", missiles:"N/A", nukes:"None",
+    budget:"$46.4 Billion", gdp:"$1.7T", power:75,
+    tz:"Asia/Seoul"
+  },
+  "United Kingdom": {
+    rank:6, flag:"🇬🇧", troops:"148,500", reserve:"79,550",
+    jets:"733", heli:"328", tanks:"227", armored:"5,015",
+    ships:"76", subs:"10", missiles:"200+", nukes:"225",
+    budget:"$68.5 Billion", gdp:"$3.1T", power:73,
+    tz:"Europe/London"
+  },
+  "Japan": {
+    rank:7, flag:"🇯🇵", troops:"247,150", reserve:"56,100",
+    jets:"1,449", heli:"537", tanks:"1,004", armored:"3,412",
+    ships:"155", subs:"22", missiles:"N/A", nukes:"None",
+    budget:"$46 Billion", gdp:"$4.2T", power:71,
+    tz:"Asia/Tokyo"
+  },
+  "Turkey": {
+    rank:8, flag:"🇹🇷", troops:"355,200", reserve:"378,700",
+    jets:"1,069", heli:"475", tanks:"3,022", armored:"9,141",
+    ships:"194", subs:"12", missiles:"N/A", nukes:"None",
+    budget:"$18.2 Billion", gdp:"$1.1T", power:68,
+    tz:"Europe/Istanbul"
+  },
+  "Pakistan": {
+    rank:9, flag:"🇵🇰", troops:"654,000", reserve:"550,000",
+    jets:"1,399", heli:"372", tanks:"3,742", armored:"9,852",
+    ships:"121", subs:"8", missiles:"130+", nukes:"165",
+    budget:"$10.3 Billion", gdp:"$347B", power:65,
+    tz:"Asia/Karachi"
+  },
+  "Brazil": {
+    rank:12, flag:"🇧🇷", troops:"334,500", reserve:"1,340,000",
+    jets:"718", heli:"175", tanks:"469", armored:"1,785",
+    ships:"110", subs:"5", missiles:"N/A", nukes:"None",
+    budget:"$20.2 Billion", gdp:"$2.1T", power:60,
+    tz:"America/Sao_Paulo"
+  },
+  "France": {
+    rank:11, flag:"🇫🇷", troops:"203,250", reserve:"35,900",
+    jets:"1,055", heli:"695", tanks:"406", armored:"6,300",
+    ships:"180", subs:"10", missiles:"290", nukes:"290",
+    budget:"$63.9 Billion", gdp:"$3.0T", power:72,
+    tz:"Europe/Paris"
+  },
+  "Germany": {
+    rank:19, flag:"🇩🇪", troops:"183,638", reserve:"30,000",
+    jets:"708", heli:"388", tanks:"266", armored:"7,900",
+    ships:"81", subs:"6", missiles:"N/A", nukes:"None",
+    budget:"$66.8 Billion", gdp:"$4.4T", power:62,
+    tz:"Europe/Berlin"
+  },
+  "Israel": {
+    rank:17, flag:"🇮🇱", troops:"169,500", reserve:"465,000",
+    jets:"612", heli:"148", tanks:"2,200", armored:"10,400",
+    ships:"67", subs:"5", missiles:"N/A", nukes:"90 (est.)",
+    budget:"$23.7 Billion", gdp:"$509B", power:65,
+    tz:"Asia/Jerusalem"
+  },
+  "Iran": {
+    rank:14, flag:"🇮🇷", troops:"580,000", reserve:"350,000",
+    jets:"551", heli:"129", tanks:"4,071", armored:"6,800",
+    ships:"398", subs:"29", missiles:"500+", nukes:"Developing",
+    budget:"$25 Billion", gdp:"$359B", power:63,
+    tz:"Asia/Tehran"
+  },
+  "Saudi Arabia": {
+    rank:23, flag:"🇸🇦", troops:"257,000", reserve:"25,000",
+    jets:"864", heli:"265", tanks:"1,062", armored:"7,610",
+    ships:"55", subs:"0", missiles:"N/A", nukes:"None",
+    budget:"$75.8 Billion", gdp:"$1.1T", power:56,
+    tz:"Asia/Riyadh"
+  },
+  "Australia": {
+    rank:16, flag:"🇦🇺", troops:"61,800", reserve:"25,700",
+    jets:"459", heli:"183", tanks:"59", armored:"2,040",
+    ships:"52", subs:"6", missiles:"N/A", nukes:"None",
+    budget:"$32.3 Billion", gdp:"$1.7T", power:60,
+    tz:"Australia/Sydney"
+  },
+  "Bangladesh": {
+    rank:37, flag:"🇧🇩", troops:"163,000", reserve:"63,900",
+    jets:"188", heli:"55", tanks:"527", armored:"2,850",
+    ships:"89", subs:"2", missiles:"N/A", nukes:"None",
+    budget:"$4.8 Billion", gdp:"$460B", power:35,
+    tz:"Asia/Dhaka"
+  },
+  "Canada": {
+    rank:27, flag:"🇨🇦", troops:"67,492", reserve:"27,650",
+    jets:"394", heli:"176", tanks:"82", armored:"1,380",
+    ships:"33", subs:"4", missiles:"N/A", nukes:"None",
+    budget:"$26.9 Billion", gdp:"$2.1T", power:52,
+    tz:"America/Toronto"
+  },
+  "North Korea": {
+    rank:36, flag:"🇰🇵", troops:"1,280,000", reserve:"600,000",
+    jets:"563", heli:"202", tanks:"6,645", armored:"37,000",
+    ships:"967", subs:"71", missiles:"100+", nukes:"40-50",
+    budget:"$3.5B (est.)", gdp:"$18B (est.)", power:40,
+    tz:"Asia/Pyongyang"
+  },
+  "Egypt": {
+    rank:15, flag:"🇪🇬", troops:"438,500", reserve:"479,000",
+    jets:"1,062", heli:"287", tanks:"4,624", armored:"14,510",
+    ships:"221", subs:"8", missiles:"N/A", nukes:"None",
+    budget:"$11.6 Billion", gdp:"$476B", power:55,
+    tz:"Africa/Cairo"
+  },
+  "Indonesia": {
+    rank:13, flag:"🇮🇩", troops:"395,500", reserve:"400,000",
+    jets:"467", heli:"235", tanks:"419", armored:"1,615",
+    ships:"282", subs:"5", missiles:"N/A", nukes:"None",
+    budget:"$9.5 Billion", gdp:"$1.3T", power:57,
+    tz:"Asia/Jakarta"
+  },
+  "Italy": {
+    rank:10, flag:"🇮🇹", troops:"165,500", reserve:"18,300",
+    jets:"831", heli:"546", tanks:"200", armored:"6,929",
+    ships:"143", subs:"8", missiles:"N/A", nukes:"None",
+    budget:"$32.7 Billion", gdp:"$2.2T", power:66,
+    tz:"Europe/Rome"
+  },
+  "Ukraine": {
+    rank:22, flag:"🇺🇦", troops:"900,000+", reserve:"N/A",
+    jets:"200+", heli:"103", tanks:"2,596", armored:"10,000+",
+    ships:"38", subs:"1", missiles:"N/A", nukes:"None",
+    budget:"$67 Billion (wartime)", gdp:"$161B", power:50,
+    tz:"Europe/Kiev"
+  },
+  "Spain": {
+    rank:24, flag:"🇪🇸", troops:"122,000", reserve:"15,150",
+    jets:"567", heli:"274", tanks:"327", armored:"2,100",
+    ships:"74", subs:"4", missiles:"N/A", nukes:"None",
+    budget:"$17.5 Billion", gdp:"$1.6T", power:51,
+    tz:"Europe/Madrid"
+  },
+  "Poland": {
+    rank:20, flag:"🇵🇱", troops:"150,000", reserve:"76,000",
+    jets:"460", heli:"264", tanks:"1,965", armored:"4,300",
+    ships:"48", subs:"5", missiles:"N/A", nukes:"None",
+    budget:"$21.6 Billion", gdp:"$842B", power:50,
+    tz:"Europe/Warsaw"
+  },
+  "Argentina": {
+    rank:28, flag:"🇦🇷", troops:"76,000", reserve:"N/A",
+    jets:"272", heli:"152", tanks:"358", armored:"1,100",
+    ships:"65", subs:"4", missiles:"N/A", nukes:"None",
+    budget:"$3.9 Billion", gdp:"$630B", power:40,
+    tz:"America/Argentina/Buenos_Aires"
+  },
+  "Mexico": {
+    rank:32, flag:"🇲🇽", troops:"227,000", reserve:"82,000",
+    jets:"365", heli:"200", tanks:"147", armored:"1,350",
+    ships:"139", subs:"0", missiles:"N/A", nukes:"None",
+    budget:"$11.9 Billion", gdp:"$1.3T", power:42,
+    tz:"America/Mexico_City"
+  },
+  "South Africa": {
+    rank:33, flag:"🇿🇦", troops:"78,050", reserve:"15,050",
+    jets:"224", heli:"96", tanks:"195", armored:"2,310",
+    ships:"25", subs:"3", missiles:"N/A", nukes:"None",
+    budget:"$3.6 Billion", gdp:"$399B", power:38,
+    tz:"Africa/Johannesburg"
+  },
+  "Nigeria": {
+    rank:38, flag:"🇳🇬", troops:"135,000", reserve:"N/A",
+    jets:"162", heli:"87", tanks:"300", armored:"1,600",
+    ships:"52", subs:"0", missiles:"N/A", nukes:"None",
+    budget:"$3.1 Billion", gdp:"$477B", power:30,
+    tz:"Africa/Lagos"
+  },
+  "Thailand": {
+    rank:29, flag:"🇹🇭", troops:"361,000", reserve:"245,000",
+    jets:"555", heli:"230", tanks:"722", armored:"2,550",
+    ships:"81", subs:"0", missiles:"N/A", nukes:"None",
+    budget:"$7.8 Billion", gdp:"$495B", power:45,
+    tz:"Asia/Bangkok"
+  }
+};
+
+// Nuclear states — all name variants from GeoJSON
+const NUCLEAR_STATES = [
+  "United States of America","United States","USA","US",
+  "Russia","Russian Federation",
+  "China","People's Republic of China",
+  "United Kingdom","Great Britain",
+  "France",
+  "India",
+  "Pakistan",
+  "Israel",
+  "North Korea","Democratic People's Republic of Korea","Korea, North"
+];
+
+// Normalize country name for MILDB lookup
+function normalizeName(name) {
+  const map = {
+    "United States": "United States of America",
+    "USA": "United States of America",
+    "US": "United States of America",
+    "Russian Federation": "Russia",
+    "People's Republic of China": "China",
+    "Great Britain": "United Kingdom",
+    "Democratic People's Republic of Korea": "North Korea",
+    "Korea, North": "North Korea",
+    "Korea, South": "South Korea",
+    "Republic of Korea": "South Korea",
+  };
+  return map[name] || name;
+}
+
+// ── MAP SETUP ─────────────────────────────────────────
+const W = window.innerWidth, H = window.innerHeight;
+const svg  = d3.select("#map-svg");
+const g    = svg.append("g");
+const proj = d3.geoNaturalEarth1().scale(W/5.8).translate([W/2, H/2]);
+const path = d3.geoPath().projection(proj);
+
+let selectedEl = null;
+let currentZoom = { k:1, x:0, y:0 };
+
+// Zoom behavior
+const zoom = d3.zoom()
+  .scaleExtent([1, 20])
+  .on("zoom", e => {
+    currentZoom = e.transform;
+    g.attr("transform", e.transform);
+  });
+svg.call(zoom);
+
+// Load GeoJSON
+d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(world => {
+  g.selectAll("path")
+    .data(world.features)
+    .enter()
+    .append("path")
+    .attr("d", path)
+    .attr("class", d => {
+      const n = normalizeName(d.properties.name);
+      return "country" + (NUCLEAR_STATES.includes(n) ? " nuclear" : "");
+    })
+    .on("mouseover", (evt, d) => showTooltip(evt, d.properties.name))
+    .on("mousemove", (evt) => moveTooltip(evt))
+    .on("mouseout",  () => hideTooltip())
+    .on("click",     (evt, d) => onCountryClick(evt, d));
+
+  document.getElementById("hint").style.display = "block";
+}).catch(e => console.error("Map load error:", e));
+
+// ── TOOLTIP ───────────────────────────────────────────
+const tooltip = document.getElementById("tooltip");
+function showTooltip(evt, name) {
+  tooltip.textContent = name;
+  tooltip.style.opacity = "1";
+  moveTooltip(evt);
+}
+function moveTooltip(evt) {
+  tooltip.style.left = (evt.clientX + 12) + "px";
+  tooltip.style.top  = (evt.clientY - 30) + "px";
+}
+function hideTooltip() { tooltip.style.opacity = "0"; }
+
+// ── CLICK HANDLER ─────────────────────────────────────
+function onCountryClick(evt, d) {
+  evt.stopPropagation();
+  const name = normalizeName(d.properties.name);
+
+  // Deselect previous
+  if (selectedEl) selectedEl.classed("selected", false);
+  selectedEl = d3.select(evt.target);
+  selectedEl.classed("selected", true);
+
+  // Zoom ring at click
+  spawnZoomRing(evt.clientX, evt.clientY);
+
+  // Zoom to country
+  const [[x0,y0],[x1,y1]] = path.bounds(d);
+  const cx = (x0+x1)/2, cy = (y0+y1)/2;
+  const scale = Math.min(8, 0.85 / Math.max((x1-x0)/W, (y1-y0)/H));
+  const tx = W/2 - scale*cx, ty = H/2 - scale*cy;
+
+  svg.transition().duration(1200).ease(d3.easeCubicInOut)
+    .call(zoom.transform, d3.zoomIdentity.translate(tx,ty).scale(scale));
+
+  // Load dashboard
+  openDashboard(name);
+  hideTooltip();
+}
+
+// ── ZOOM RING FX ──────────────────────────────────────
+function spawnZoomRing(x, y) {
+  const r = document.createElement("div");
+  r.className = "zoom-ring";
+  r.style.cssText = `left:${x}px;top:${y}px;width:60px;height:60px;`;
+  document.body.appendChild(r);
+  setTimeout(() => r.remove(), 900);
+}
+
+// ── DASHBOARD ─────────────────────────────────────────
+let clockInterval = null;
+
+function openDashboard(name) {
+  const dash = document.getElementById("dashboard");
+  dash.style.display = "block";
+  dash.style.animation = "none";
+  dash.offsetHeight; // reflow
+  dash.style.animation = "dashIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both";
+
+  document.getElementById("hint").style.display = "none";
+
+  const mil = MILDB[name] || null;
+  const tz  = mil?.tz || "UTC";
+  const flag = mil?.flag || "🌍";
+  const rank = mil?.rank ? `MILITARY RANK: #${mil.rank} GLOBALLY` : "MILITARY RANK: CLASSIFIED";
+
+  document.getElementById("d-flag").textContent = flag;
+  document.getElementById("d-name").textContent = name.toUpperCase();
+  document.getElementById("d-rank").textContent = rank;
+
+  // Military stats
+  const set = (id, val, fallback="N/A") => {
+    document.getElementById(id).textContent = val || fallback;
+  };
+  set("d-troops",  mil?.troops);
+  set("d-reserve", mil?.reserve);
+  set("d-jets",    mil?.jets);
+  set("d-heli",    mil?.heli);
+  set("d-tanks",   mil?.tanks);
+  set("d-armored", mil?.armored);
+  set("d-ships",   mil?.ships);
+  set("d-subs",    mil?.subs);
+  set("d-missiles",mil?.missiles);
+  set("d-nukes",   mil?.nukes, "None");
+  set("d-budget",  mil?.budget);
+  set("d-gdp",     mil?.gdp);
+
+  // Nuclear badge — check by name OR by nukes data
+  const isNuclear = NUCLEAR_STATES.includes(name) || 
+                    (mil?.nukes && mil.nukes !== "None" && mil.nukes !== "N/A");
+  document.getElementById("nuclear-badge").classList.toggle("show", isNuclear);
+
+  // Power bar
+  const power = mil?.power || 10;
+  document.getElementById("power-fill").style.width = power + "%";
+  document.getElementById("power-score").textContent = power + "/100";
+
+  // Fetch from RestCountries
+  fetchCountryData(name);
+
+  // Start clock
+  if (clockInterval) clearInterval(clockInterval);
+  updateClock(tz);
+  clockInterval = setInterval(() => updateClock(tz), 1000);
+}
+
+// ── FETCH FROM API ────────────────────────────────────
+async function fetchCountryData(name) {
+  try {
+    const res  = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(name)}?fullText=true`);
+    const data = await res.json();
+    if (!data || data.status === 404) throw new Error("Not found");
+    const c = data[0];
+
+    // Population
+    document.getElementById("d-pop").textContent =
+      c.population ? c.population.toLocaleString("en-US") + " people" : "N/A";
+
+    // Capital
+    document.getElementById("d-capital").textContent =
+      c.capital?.[0] || "N/A";
+
+    // Area
+    document.getElementById("d-area").textContent =
+      c.area ? c.area.toLocaleString("en-US") + " km²" : "N/A";
+
+    // Region
+    document.getElementById("d-region").textContent =
+      (c.region || "") + (c.subregion ? " · " + c.subregion : "");
+
+    // Update timezone from API if not in our DB
+    const tz = c.timezones?.[0];
+    if (tz && !MILDB[name]?.tz) {
+      const resolvedTz = tz.includes("/") ? tz : "UTC";
+      if (clockInterval) clearInterval(clockInterval);
+      updateClock(resolvedTz);
+      clockInterval = setInterval(() => updateClock(resolvedTz), 1000);
+    }
+  } catch(e) {
+    document.getElementById("d-pop").textContent = "Data unavailable";
+  }
+}
+
+// ── CLOCK ─────────────────────────────────────────────
+function updateClock(tz) {
+  try {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("en-US", {
+      timeZone: tz, hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false
+    });
+    const dateStr = now.toLocaleDateString("en-US", {
+      timeZone: tz, weekday:"long", year:"numeric", month:"short", day:"numeric"
+    });
+    const hour = parseInt(now.toLocaleString("en-US", { timeZone:tz, hour:"numeric", hour12:false }));
+
+    document.getElementById("d-time").textContent = timeStr;
+    document.getElementById("d-date").textContent = dateStr;
+
+    const isDay = hour >= 6 && hour < 18;
+    const isMorning = hour >= 5 && hour < 12;
+    const isEvening = hour >= 17 && hour < 21;
+
+    let icon, label, color;
+    if (isEvening)      { icon="🌅"; label="EVENING"; color="var(--gold)"; }
+    else if (isDay)     { icon="☀️"; label="DAYTIME";  color="var(--gold)"; }
+    else if (isMorning) { icon="🌄"; label="MORNING";  color="var(--gold)"; }
+    else                { icon="🌙"; label="NIGHT";    color="#818cf8"; }
+
+    const dnEl = document.getElementById("d-daynight");
+    dnEl.textContent = label;
+    dnEl.style.color = color;
+    dnEl.className   = "time-label " + (isDay ? "day" : "night");
+    document.getElementById("d-icon").textContent = icon;
+  } catch(e) {
+    document.getElementById("d-time").textContent = "N/A";
+  }
+}
+
+// ── GLOBAL CLOCK ──────────────────────────────────────
+setInterval(() => {
+  document.getElementById("hud-clock").textContent =
+    new Date().toLocaleTimeString("en-US",{hour12:false});
+}, 1000);
+
+// ── CLOSE ─────────────────────────────────────────────
+function closeDash() {
+  document.getElementById("dashboard").style.display = "none";
+  if (selectedEl) selectedEl.classed("selected", false);
+  selectedEl = null;
+  if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+  document.getElementById("hint").style.display = "block";
+  // Reset zoom
+  svg.transition().duration(900).ease(d3.easeCubicInOut)
+    .call(zoom.transform, d3.zoomIdentity);
+}
+
+// Click ocean to close
+svg.on("click", () => { if(selectedEl) closeDash(); });
+</script>
+</body>
+</html>
